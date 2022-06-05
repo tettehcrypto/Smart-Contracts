@@ -131,6 +131,10 @@ contract Token is ERC20, Ownable {
         liquidityTax = taxes[3];
     }
 
+    function setSellTaxes(uint8[] calldata _sellTaxValues) external onlyOwner{
+        sellTaxValues = _sellTaxValues;
+    }
+
     /* View / Pure Functions */
 
 }
