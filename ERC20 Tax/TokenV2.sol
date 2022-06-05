@@ -53,6 +53,13 @@ contract Token is ERC20, Ownable {
         require(distributeTax(from, taxAmount));
         super._transfer(from, to, amountReceived); 
     }
+    
+    function mint(
+        address to,
+        uint256 amount
+    ) external onlyOwner {
+        _mint(to, amount);
+    }
 
     function distributeTax(address from, uint256 taxAmount) internal returns (bool) {
         uint256 toMarketing = (taxAmount/marketingTax) * 100;
