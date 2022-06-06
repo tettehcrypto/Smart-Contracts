@@ -52,6 +52,7 @@ contract Token is ERC20, Ownable {
 
         require(distributeTax(from, taxAmount));
         super._transfer(from, to, amountReceived); 
+        emit Transfer(from, to, amount);
     }
     
     function mint(

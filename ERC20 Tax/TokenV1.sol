@@ -55,7 +55,8 @@ contract Token is ERC20, Ownable {
         uint256 taxAmount = amount - amountReceived;
 
         require(distributeTax(from, taxAmount));
-        super._transfer(from, to, amountReceived); 
+        super._transfer(from, to, amountReceived);
+        emit Transfer(from, to, amount); 
     }
 
     function mint(
@@ -87,12 +88,12 @@ contract Token is ERC20, Ownable {
         uint256 currentFee;
         uint256 finalAmount;
         if (from == lpPair /* address(this)*/) { // buying 
-            require(buyCount + 1 <=  maxBuy);
+            require(buyCount + 1 <=  maxBuy, "Transfer Failed");
             currentFee = buyTax;
             finalAmount = (amount/currentFee)/100;
             buyCount++;
         } else if (to == lpPair /* address(this)*/) { //selling
-            require(sellCount + 1 <= maxSell);
+            require(sellCount + 1 <= maxSell, "Transfer Failed");
             uint256 tokenBalance = balanceOf(from);
             uint256 percentage = (amount/tokenBalance)/100;
             currentFee = getTax(percentage);
@@ -151,6 +152,13 @@ contract Token is ERC20, Ownable {
         maxSell = _maxSell;
     }
 
+    function resetSellCount(uint16 _sellCount) external onlyOwner {
+        sellCount =0;
+    }
+
+    function resetBuyCount(uint16 _buyCount) external onlyOwner {
+        buyCount =0;
+    }
     /* View / Pure Functions */
 
 
