@@ -605,6 +605,7 @@ contract Token is ERC20, Ownable {
     address private lpWallet;
     address private lpPair;
     address private devWallet;
+    uint256 private _decimals = 18;
 
     /* Tax Variables */
     uint8[] sellTaxValues = [10,15,20,25,30,35,40,45,50];
@@ -637,7 +638,8 @@ contract Token is ERC20, Ownable {
         marketingTax = _marketingTax;
         maxSell = _maxSell;
         maxBuy = _maxBuy;
-        _mint(msg.sender, _totalSupply);
+
+        _mint(msg.sender, _totalSupply * (10**_decimals));
     }
     
     function _transfer(
