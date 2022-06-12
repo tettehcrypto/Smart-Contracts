@@ -491,6 +491,7 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
      * - `account` cannot be the zero address.
      * - `account` must have at least `amount` tokens.
      */
+
     function _burn(address account, uint256 amount) internal virtual {
         require(account != address(0), "ERC20: burn from the zero address");
 
@@ -521,6 +522,7 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
      * - `owner` cannot be the zero address.
      * - `spender` cannot be the zero address.
      */
+     
     function _approve(
         address owner,
         address spender,
@@ -608,12 +610,12 @@ contract Token is ERC20, Ownable {
     uint256 private _decimals = 18;
 
     /* Tax Variables */
-    uint8[] sellTaxValues = [10,15,20,25,30,35,40,45,50];
-    uint8 buyTax = 6;
-    uint8 devTax;
-    uint8 marketingTax;
-    uint16 sellCount;
-    uint16 buyCount;
+    uint8[] private sellTaxValues = [10,15,20,25,30,35,40,45,50];
+    uint8 private buyTax = 6;
+    uint8 private devTax;
+    uint8 private marketingTax;
+    uint16 private sellCount;
+    uint16 private buyCount;
     uint16 private maxSell;
     uint16 private maxBuy;
 
@@ -765,6 +767,11 @@ contract Token is ERC20, Ownable {
             return sellTaxValues[8];
         }   
     }
+
+    function getTaxRates() external view returns (uint8[3] memory) {
+        return [buyTax, devTax, marketingTax];
+    }
+
 
     // Withdraw Stuck Balance
     function withdraw() external onlyOwner {
