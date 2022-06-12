@@ -768,10 +768,17 @@ contract Token is ERC20, Ownable {
         }   
     }
 
-    function getTaxRates() external view returns (uint8[3] memory) {
+    function getTaxRates() external view onlyOwner returns (uint8[3] memory) {
         return [buyTax, devTax, marketingTax];
     }
 
+    function getBuyCount() external view returns (uint256) {
+        return buyCount;
+    }
+
+    function getSellCount() external view returns (uint256) {
+        return sellCount;
+    }
 
     // Withdraw Stuck Balance
     function withdraw() external onlyOwner {
