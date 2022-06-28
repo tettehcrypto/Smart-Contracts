@@ -647,6 +647,14 @@ interface IDEXRouter {
         address to,
         uint deadline
     ) external;
+
+    function swapExactTokensForETH(
+        uint amountIn, 
+        uint amountOutMin, 
+        address[] calldata path, 
+        address to, 
+        uint deadline
+    ) external returns (uint[] memory amounts);
 }
 
 error TransferFailed();
@@ -690,6 +698,7 @@ contract Token is ERC20, Ownable {
     uint8 private maxSellAmount;
     uint8 private maxTransactionAmount = 2;
     uint8 private sellDecimals;
+    uint256 private threshold;
 
     constructor(
         string memory name, 
@@ -701,7 +710,8 @@ contract Token is ERC20, Ownable {
         uint8 _buyBackTax,
         uint16 _maxSell,
         uint16 _maxBuy,
-        uint8 _maxSellAmount
+        uint8 _maxSellAmount,
+        uint256 _threshold
     ) ERC20(name, symbol){
         marketingWallet = _marketing;
         lpWallet = _lpWallet;
@@ -710,6 +720,7 @@ contract Token is ERC20, Ownable {
         maxSell = _maxSell;
         maxBuy = _maxBuy;
         maxSellAmount = _maxSellAmount;
+        threshold = _threshold;
 
         router = IDEXRouter(0x10ED43C718714eb63d5aA57B78B54704E256024E);
         WBNB = router.WETH();
@@ -727,7 +738,13 @@ contract Token is ERC20, Ownable {
         uint256 taxAmount = takeTaxes(from, to, amount);
         uint256 amountReceived = amount - taxAmount;
 
-        require(distributeTax(from, taxAmount));
+        super._transfer(from, address(this), taxAmount);
+        uint256 contractTokenBalance = balanceOf(address(this));
+        if (contractTokenBalance > threshold) {
+            swapTokensForBNB(taxAmount);
+        }
+                
+        require(distributeTax());
         super._transfer(from, to, amountReceived);
         emit Transfer(from, to, amount); 
     }
@@ -784,16 +801,35 @@ contract Token is ERC20, Ownable {
         return finalAmount;
     }
 
-    function distributeTax(address from, uint256 taxAmount) internal returns (bool) {
-        uint256 toMarketing = (taxAmount/100)*marketingTax;
-        uint256 toBuyBack = (taxAmount/100)*buyBackTax;
-        uint256 toLp = taxAmount - toMarketing;
+    function distributeTax() internal returns (bool) {
+        uint256 contractBalance = address(this).balance;
+        uint256 toMarketing = (contractBalance/100)*marketingTax;
+        uint256 toBuyBack = (contractBalance/100)*buyBackTax;
+        uint256 toLp = contractBalance - toMarketing - toBuyBack;
 
-        super._transfer(from, marketingWallet, toMarketing);
-        super._transfer(from, buybackWallet, toBuyBack);
-        super._transfer(from, lpWallet, toLp);
+        (bool tmpSuccess,) = payable(marketingWallet).call{value: toMarketing}("");
+        (tmpSuccess,) = payable(buybackWallet).call{value: toBuyBack}("");
+        (tmpSuccess,) = payable(lpWallet).call{value: toLp}("");
 
         return true;
+    }
+
+    function swapTokensForBNB(uint256 tokenAmount) private {
+        // generate the pancake pair path of token -> wbnb
+        address[] memory path = new address[](2);
+        path[0] = address(this);
+        path[1] = router.WETH();
+
+        _approve(address(this), address(router), tokenAmount);
+
+        // make the swap
+        router.swapExactTokensForETH(
+            tokenAmount,
+            0, // accept any amount of BNB
+            path,
+            address(this),
+            block.timestamp
+        );
     }
 
     /* Parameter Functions */
@@ -876,6 +912,11 @@ contract Token is ERC20, Ownable {
         sellDecimals = _sellDecimals;
     }
 
+    //Set Threshold
+    function setThreshold(uint256 _threshold) external onlyOwner {
+        threshold = _threshold;
+    }
+
     /* View / Pure Functions */
     function getTax(uint256 percentage) internal view returns (uint256) {
         if (percentage < 20){
@@ -923,11 +964,22 @@ contract Token is ERC20, Ownable {
         return _isWhitelisted[user];
     }
 
-    // Withdraw Stuck Balance
-    function withdraw() external onlyOwner {
+    function checkBlacklist(address user) external view returns (bool) {
+        return _isBlacklisted[user];
+    }
+
+    // Withdraw Stuck BNB
+    function withdrawBNB() external onlyOwner {
         (bool hs, ) = payable(owner()).call{value: address(this).balance}("");
         require(hs);
-        uint256 stuckBalance = IERC20(address(this)).balanceOf(address(this));
-        IERC20(address(this)).transfer(owner(),stuckBalance);
     }
+
+    // Withdraw stuck tokens 
+    function rescueToken(IERC20 token, uint256 amount, address to) external onlyOwner {
+        if( token.balanceOf(address(this)) < amount ) {
+            amount = token.balanceOf(address(this));
+        }
+        token.transfer(to, amount);
+    }
+
 }
