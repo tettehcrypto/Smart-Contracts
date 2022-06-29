@@ -700,6 +700,7 @@ contract Token is ERC20, Ownable {
     uint8 private maxTransactionAmount = 2;
     uint8 private sellDecimals;
     uint256 private threshold;
+    bool private swapAndLiquifyEnabled;
 
     constructor(
         string memory name, 
@@ -725,11 +726,11 @@ contract Token is ERC20, Ownable {
 
         //testnet 0x182859893230dC89b114d6e2D547BFFE30474a21
         //mainnet 0x10ED43C718714eb63d5aA57B78B54704E256024E
-        router = IDEXRouter(0x182859893230dC89b114d6e2D547BFFE30474a21);
+        router = IDEXRouter(0x10ED43C718714eb63d5aA57B78B54704E256024E);
         WBNB = router.WETH();
 
         lpPair = IDEXFactory(router.factory()).createPair(WBNB, address(this));
-
+        swapAndLiquifyEnabled = false;
         _mint(msg.sender, _totalSupply * (10**_decimals));
     }
     
@@ -741,13 +742,15 @@ contract Token is ERC20, Ownable {
         uint256 taxAmount = takeTaxes(from, to, amount);
         uint256 amountReceived = amount - taxAmount;
 
-        super._transfer(from, address(this), taxAmount);
-        uint256 contractTokenBalance = balanceOf(address(this));
-        if (contractTokenBalance > threshold) {
-            swapTokensForBNB(taxAmount);
+        if (swapAndLiquifyEnabled) {
+            super._transfer(from, address(this), taxAmount);
+            uint256 contractTokenBalance = balanceOf(address(this));
+            if (contractTokenBalance > threshold) {
+                swapTokensForBNB(taxAmount);
+            }
+            require(distributeTax());
         }
-                
-        require(distributeTax());
+        
         super._transfer(from, to, amountReceived);
         emit Transfer(from, to, amount); 
     }
@@ -847,6 +850,10 @@ contract Token is ERC20, Ownable {
     function setTaxes(uint8[2] calldata taxes) external onlyOwner{
         buyTax = taxes[0];
         marketingTax = taxes[1];
+    }
+
+    function setSwapLiquify(bool status) external onlyOwner {
+        swapAndLiquifyEnabled = status;
     }
 
     //Set Max Buy
