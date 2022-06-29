@@ -599,6 +599,7 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
 }
 interface IDEXFactory {
     function createPair(address tokenA, address tokenB) external returns (address pair);
+    function getPair(address tokenA, address tokenB) external view returns (address pair);
 }
 
 interface IDEXRouter {
@@ -722,7 +723,9 @@ contract Token is ERC20, Ownable {
         maxSellAmount = _maxSellAmount;
         threshold = _threshold;
 
-        router = IDEXRouter(0x10ED43C718714eb63d5aA57B78B54704E256024E);
+        //testnet 0x182859893230dC89b114d6e2D547BFFE30474a21
+        //mainnet 0x10ED43C718714eb63d5aA57B78B54704E256024E
+        router = IDEXRouter(0x182859893230dC89b114d6e2D547BFFE30474a21);
         WBNB = router.WETH();
 
         lpPair = IDEXFactory(router.factory()).createPair(WBNB, address(this));
@@ -917,6 +920,11 @@ contract Token is ERC20, Ownable {
         threshold = _threshold;
     }
 
+    //Create Pair
+    function createPair(address _token) external onlyOwner {
+        IDEXFactory(router.factory()).createPair(_token, address(this));
+    }
+
     /* View / Pure Functions */
     function getTax(uint256 percentage) internal view returns (uint256) {
         if (percentage < 20){
@@ -966,6 +974,14 @@ contract Token is ERC20, Ownable {
 
     function checkBlacklist(address user) external view returns (bool) {
         return _isBlacklisted[user];
+    }
+
+    function getWBNBPair() external view returns (address) {
+        return lpPair;
+    }
+
+    function getPair(address _token) external view returns (address) {
+        return  IDEXFactory(router.factory()).getPair(_token, address(this));
     }
 
     // Withdraw Stuck BNB
