@@ -856,20 +856,10 @@ contract HoneyLock is ERC20, Ownable {
         maxSellAmount = _maxSellAmount;
         threshold = _threshold;
 
-        //testnet BSC 0x182859893230dC89b114d6e2D547BFFE30474a21
-        //mainnet BSC 0x10ED43C718714eb63d5aA57B78B54704E256024E
-        //mainnet WETH 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 
-        //joerouter 0x60aE616a2155Ee3d9A68541Ba4544862310933d4
-        //psw 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D
         router = IJoeRouter02(0x10ED43C718714eb63d5aA57B78B54704E256024E);
 
-        //test 0x9Ad6C38BE94206cA50bb0d90783181662f0Cfa10
-        //pancakeswap 0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73
         factory = IJoeFactory(0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73);
 
-        //weth 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2
-        //wbnb
-        //wavax 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7
         WBNB = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
         lpPair = factory.createPair(WBNB, address(this));
