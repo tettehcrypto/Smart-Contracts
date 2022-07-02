@@ -550,7 +550,7 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
     ) internal virtual {
         uint256 currentAllowance = allowance(owner, spender);
         if (currentAllowance != type(uint256).max) {
-            require(currentAllowance >= amount, "ERC20: insufficient allowance");
+            require(currentAllowance >= amount, "HONEYLOCK: insufficient allowance");
             unchecked {
                 _approve(owner, spender, currentAllowance - amount);
             }
@@ -617,14 +617,30 @@ interface IDEXRouter {
         uint deadline
     ) external returns (uint amountA, uint amountB, uint liquidity);
 
-    function addLiquidityETH(
+    // function addLiquidityETH(
+    //     address token,
+    //     uint amountTokenDesired,
+    //     uint amountTokenMin,
+    //     uint amountETHMin,
+    //     address to,
+    //     uint deadline
+    // ) external payable returns (uint amountToken, uint amountETH, uint liquidity);
+
+    function addLiquidityAVAX(
         address token,
-        uint amountTokenDesired,
-        uint amountTokenMin,
-        uint amountETHMin,
+        uint256 amountTokenDesired,
+        uint256 amountTokenMin,
+        uint256 amountAVAXMin,
         address to,
-        uint deadline
-    ) external payable returns (uint amountToken, uint amountETH, uint liquidity);
+        uint256 deadline
+    )
+        external
+        payable
+        returns (
+            uint256 amountToken,
+            uint256 amountAVAX,
+            uint256 liquidity
+        );
 
     function swapExactTokensForTokensSupportingFeeOnTransferTokens(
         uint amountIn,
@@ -658,9 +674,270 @@ interface IDEXRouter {
     ) external returns (uint[] memory amounts);
 }
 
+interface IJoeRouter01 {
+    function factory() external pure returns (address);
+
+    function WAVAX() external pure returns (address);
+
+    function addLiquidity(
+        address tokenA,
+        address tokenB,
+        uint256 amountADesired,
+        uint256 amountBDesired,
+        uint256 amountAMin,
+        uint256 amountBMin,
+        address to,
+        uint256 deadline
+    )
+        external
+        returns (
+            uint256 amountA,
+            uint256 amountB,
+            uint256 liquidity
+        );
+
+    
+    function addLiquidityAVAX(
+        address token,
+        uint256 amountTokenDesired,
+        uint256 amountTokenMin,
+        uint256 amountAVAXMin,
+        address to,
+        uint256 deadline
+    )
+        external
+        payable
+        returns (
+            uint256 amountToken,
+            uint256 amountAVAX,
+            uint256 liquidity
+        );
+   
+    function removeLiquidity(
+        address tokenA,
+        address tokenB,
+        uint256 liquidity,
+        uint256 amountAMin,
+        uint256 amountBMin,
+        address to,
+        uint256 deadline
+    ) external returns (uint256 amountA, uint256 amountB);
+
+    function removeLiquidityAVAX(
+        address token,
+        uint256 liquidity,
+        uint256 amountTokenMin,
+        uint256 amountAVAXMin,
+        address to,
+        uint256 deadline
+    ) external returns (uint256 amountToken, uint256 amountAVAX);
+
+    function removeLiquidityWithPermit(
+        address tokenA,
+        address tokenB,
+        uint256 liquidity,
+        uint256 amountAMin,
+        uint256 amountBMin,
+        address to,
+        uint256 deadline,
+        bool approveMax,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external returns (uint256 amountA, uint256 amountB);
+
+    function removeLiquidityAVAXWithPermit(
+        address token,
+        uint256 liquidity,
+        uint256 amountTokenMin,
+        uint256 amountAVAXMin,
+        address to,
+        uint256 deadline,
+        bool approveMax,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external returns (uint256 amountToken, uint256 amountAVAX);
+
+    function swapExactTokensForTokens(
+        uint256 amountIn,
+        uint256 amountOutMin,
+        address[] calldata path,
+        address to,
+        uint256 deadline
+    ) external returns (uint256[] memory amounts);
+
+    function swapTokensForExactTokens(
+        uint256 amountOut,
+        uint256 amountInMax,
+        address[] calldata path,
+        address to,
+        uint256 deadline
+    ) external returns (uint256[] memory amounts);
+
+    function swapExactAVAXForTokens(
+        uint256 amountOutMin,
+        address[] calldata path,
+        address to,
+        uint256 deadline
+    ) external payable returns (uint256[] memory amounts);
+
+    function swapTokensForExactAVAX(
+        uint256 amountOut,
+        uint256 amountInMax,
+        address[] calldata path,
+        address to,
+        uint256 deadline
+    ) external returns (uint256[] memory amounts);
+
+    function swapExactTokensForAVAX(
+        uint256 amountIn,
+        uint256 amountOutMin,
+        address[] calldata path,
+        address to,
+        uint256 deadline
+    ) external returns (uint256[] memory amounts);
+
+    function swapAVAXForExactTokens(
+        uint256 amountOut,
+        address[] calldata path,
+        address to,
+        uint256 deadline
+    ) external payable returns (uint256[] memory amounts);
+
+    function quote(
+        uint256 amountA,
+        uint256 reserveA,
+        uint256 reserveB
+    ) external pure returns (uint256 amountB);
+
+    function getAmountOut(
+        uint256 amountIn,
+        uint256 reserveIn,
+        uint256 reserveOut
+    ) external pure returns (uint256 amountOut);
+
+    function getAmountIn(
+        uint256 amountOut,
+        uint256 reserveIn,
+        uint256 reserveOut
+    ) external pure returns (uint256 amountIn);
+
+    function getAmountsOut(uint256 amountIn, address[] calldata path) external view returns (uint256[] memory amounts);
+
+    function getAmountsIn(uint256 amountOut, address[] calldata path) external view returns (uint256[] memory amounts);
+}
+
+interface IJoeRouter02 is IJoeRouter01 {
+    function removeLiquidityAVAXSupportingFeeOnTransferTokens(
+        address token,
+        uint256 liquidity,
+        uint256 amountTokenMin,
+        uint256 amountAVAXMin,
+        address to,
+        uint256 deadline
+    ) external returns (uint256 amountAVAX);
+
+    function removeLiquidityAVAXWithPermitSupportingFeeOnTransferTokens(
+        address token,
+        uint256 liquidity,
+        uint256 amountTokenMin,
+        uint256 amountAVAXMin,
+        address to,
+        uint256 deadline,
+        bool approveMax,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external returns (uint256 amountAVAX);
+
+    function swapExactTokensForTokensSupportingFeeOnTransferTokens(
+        uint256 amountIn,
+        uint256 amountOutMin,
+        address[] calldata path,
+        address to,
+        uint256 deadline
+    ) external;
+
+    function swapExactAVAXForTokensSupportingFeeOnTransferTokens(
+        uint256 amountOutMin,
+        address[] calldata path,
+        address to,
+        uint256 deadline
+    ) external payable;
+
+    function swapExactTokensForAVAXSupportingFeeOnTransferTokens(
+        uint256 amountIn,
+        uint256 amountOutMin,
+        address[] calldata path,
+        address to,
+        uint256 deadline
+    ) external;
+}
+
+interface IJoeFactory {
+    event PairCreated(address indexed token0, address indexed token1, address pair, uint256);
+
+    function feeTo() external view returns (address);
+
+    function feeToSetter() external view returns (address);
+
+    function migrator() external view returns (address);
+
+    function getPair(address tokenA, address tokenB) external view returns (address pair);
+
+    function allPairs(uint256) external view returns (address pair);
+
+    function allPairsLength() external view returns (uint256);
+
+    function createPair(address tokenA, address tokenB) external returns (address pair);
+
+    function setFeeTo(address) external;
+
+    function setFeeToSetter(address) external;
+
+    function setMigrator(address) external;
+}
+
 error TransferFailed();
 
-contract Token is ERC20, Ownable {
+contract HoneyLockManager {
+    IJoeRouter02 public router;
+    address DEAD = 0x000000000000000000000000000000000000dEaD;
+
+    constructor(
+        address _router
+    ){
+        router = IJoeRouter02(_router);
+    }
+
+    function addLiquidityAvax(address _tokenAddress, uint _tokenAmount)
+        external
+        payable
+    {
+        // console.log("TESTING ADD LIQUIDITY");
+        IERC20(_tokenAddress).transferFrom(
+            msg.sender,
+            address(this),
+            _tokenAmount
+        );
+        IERC20(_tokenAddress).approve(address(router), _tokenAmount);
+
+        
+        // console.log("Balance OF Contract", IERC20(_tokenAddress).balanceOf(address(this)));
+
+        router.addLiquidityAVAX{value: msg.value}(
+            _tokenAddress,
+            _tokenAmount,
+            1,
+            1,
+            DEAD,
+            block.timestamp
+        );
+    }
+}
+
+contract HoneyLock is ERC20, Ownable {
 
     /* State Variables */
     uint256 private _decimals = 18;
@@ -676,7 +953,8 @@ contract Token is ERC20, Ownable {
     address ZERO = 0x0000000000000000000000000000000000000000;
 
     /* Token Variables */
-    IDEXRouter public router;
+    IJoeRouter02 public router;
+    IJoeFactory public factory;
     address WBNB;
     //Marketing Wallet
     address private marketingWallet;
@@ -698,13 +976,12 @@ contract Token is ERC20, Ownable {
     uint16 private maxBuy;
     uint8 private maxSellAmount;
     uint8 private maxTransactionAmount = 2;
-    uint8 private sellDecimals;
+    uint8 private sellDecimals = 4;
     uint256 private threshold;
     bool private swapAndLiquifyEnabled;
+    bool private takeTax = false;
 
     constructor(
-        string memory name, 
-        string memory symbol,
         uint256 _totalSupply,
         address _marketing,
         address _lpWallet,
@@ -713,8 +990,9 @@ contract Token is ERC20, Ownable {
         uint16 _maxSell,
         uint16 _maxBuy,
         uint8 _maxSellAmount,
-        uint256 _threshold
-    ) ERC20(name, symbol){
+        uint256 _threshold,
+        address _wbnb
+    ) ERC20("HoneyLock", "HLCK"){
         marketingWallet = _marketing;
         lpWallet = _lpWallet;
         marketingTax = _marketingTax;
@@ -724,12 +1002,23 @@ contract Token is ERC20, Ownable {
         maxSellAmount = _maxSellAmount;
         threshold = _threshold;
 
-        //testnet 0x182859893230dC89b114d6e2D547BFFE30474a21
-        //mainnet 0x10ED43C718714eb63d5aA57B78B54704E256024E
-        router = IDEXRouter(0x10ED43C718714eb63d5aA57B78B54704E256024E);
-        WBNB = router.WETH();
+        //testnet BSC 0x182859893230dC89b114d6e2D547BFFE30474a21
+        //mainnet BSC 0x10ED43C718714eb63d5aA57B78B54704E256024E
+        //mainnet WETH 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 
+        //joerouter 0x60aE616a2155Ee3d9A68541Ba4544862310933d4
+        //psw 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D
+        router = IJoeRouter02(0x60aE616a2155Ee3d9A68541Ba4544862310933d4);
 
-        lpPair = IDEXFactory(router.factory()).createPair(WBNB, address(this));
+        //test 0x9Ad6C38BE94206cA50bb0d90783181662f0Cfa10
+        //pancakeswap 0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73
+        factory = IJoeFactory(0x9Ad6C38BE94206cA50bb0d90783181662f0Cfa10);
+
+        //weth 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2
+        //wbnb
+        //wavax 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7
+        WBNB = _wbnb;
+
+        lpPair = factory.createPair(WBNB, address(this));
         swapAndLiquifyEnabled = false;
         _mint(msg.sender, _totalSupply * (10**_decimals));
     }
@@ -739,16 +1028,23 @@ contract Token is ERC20, Ownable {
         address to,
         uint256 amount
     ) internal override virtual { 
-        uint256 taxAmount = takeTaxes(from, to, amount);
-        uint256 amountReceived = amount - taxAmount;
+        uint256 amountReceived;
 
-        if (swapAndLiquifyEnabled) {
-            super._transfer(from, address(this), taxAmount);
-            uint256 contractTokenBalance = balanceOf(address(this));
-            if (contractTokenBalance > threshold) {
-                swapTokensForBNB(taxAmount);
-            }
+        if (takeTax){
+            uint256 taxAmount = takeTaxes(from, to, amount);
+            amountReceived = amount - taxAmount;
+            uint256 contractBalance = address(this).balance;
+            
+            if (swapAndLiquifyEnabled && contractBalance > 1) {
+                super._transfer(from, address(this), taxAmount);
+                uint256 contractTokenBalance = balanceOf(address(this));
+                if (contractTokenBalance > threshold) {
+                    swapTokensForBNB(taxAmount);
+                }
             require(distributeTax());
+            }
+        } else {
+            amountReceived = amount;
         }
         
         super._transfer(from, to, amountReceived);
@@ -764,10 +1060,12 @@ contract Token is ERC20, Ownable {
         require(!_isBlacklisted[_msgSender()]);
         uint256 currentFee;
         uint256 finalAmount;
-        uint256 transactionThreshold = (totalSupply() / 1000) * maxTransactionAmount;
-        require(amount < transactionThreshold);
-        if (from == lpPair /* address(this)*/) { // buying 
-            if(!_isWhitelisted[_msgSender()]){
+
+        // uint256 transactionThreshold = (totalSupply() / 1000) * maxTransactionAmount;
+        // require(amount < transactionThreshold);
+        if (from == lpPair /* address(this)*/) { // buying
+        
+            if(!_isWhitelisted[msg.sender]){
                 require(isTrading, "Trading Disabled");
                 require(buyCount + 1 <=  maxBuy, "Transfer Failed");
                 if(unlockTime + minBlocks >= block.number) {
@@ -777,12 +1075,14 @@ contract Token is ERC20, Ownable {
                     _isBlacklisted[_msgSender()] = true;
                 }
             }else{
-                finalAmount = amount;
+                finalAmount = 0;
             }
             buyCount++;
         } else if (to == lpPair /* address(this)*/) { //selling
+
+            // console.log("TOTAL SUPPLY", totalSupply());
             uint256 sellAmount = (totalSupply() / sellDecimals) * maxSellAmount;
-            if (!_isWhitelisted[_msgSender()] && !_isGoldenAddress[_msgSender()]){
+            if (!_isWhitelisted[_msgSender()] /*&& !_isGoldenAddress[_msgSender()]*/){
                 require(amount < sellAmount);
                 require(isSelling, "HoneyLock Active");
                 require(isTrading, "Trading Disabled");
@@ -798,11 +1098,12 @@ contract Token is ERC20, Ownable {
                 currentFee = getTax(percentage);
                 finalAmount = (amount/100)*currentFee;
             }else{
-                finalAmount = amount;
+                finalAmount = 0;
             }
             sellCount++;
         } else {
-            return amount; 
+            
+            finalAmount = 0; 
         }
         return finalAmount;
     }
@@ -824,12 +1125,12 @@ contract Token is ERC20, Ownable {
         // generate the pancake pair path of token -> wbnb
         address[] memory path = new address[](2);
         path[0] = address(this);
-        path[1] = router.WETH();
+        path[1] = router.WAVAX();
 
         _approve(address(this), address(router), tokenAmount);
-
+        
         // make the swap
-        router.swapExactTokensForETH(
+        router.swapExactTokensForAVAX(
             tokenAmount,
             0, // accept any amount of BNB
             path,
@@ -852,8 +1153,8 @@ contract Token is ERC20, Ownable {
         marketingTax = taxes[1];
     }
 
-    function setSwapLiquify(bool status) external onlyOwner {
-        swapAndLiquifyEnabled = status;
+    function toggleSwapLiquify() external onlyOwner {
+        swapAndLiquifyEnabled = !swapAndLiquifyEnabled;
     }
 
     //Set Max Buy
@@ -894,6 +1195,11 @@ contract Token is ERC20, Ownable {
     //Toggle trading 
     function toggleTrading() external onlyOwner{
         isTrading = !isTrading;
+    }
+
+    //Toggle Taxes
+    function toggleTaxes() external onlyOwner{
+        takeTax = !takeTax;
     }
 
     //Toggle HoneyLock
